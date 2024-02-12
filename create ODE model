@@ -1,0 +1,40 @@
+% Load NPP dataset from CSV file
+npp_data = readtable('NPP.csv');  % Replace 'NPP.csv' with the path to your NPP dataset
+
+% Extract data
+years = npp_data.Year;
+months = npp_data.Month;
+time = years + (months - 1) / 12; % Combine "Year" and "Month" to create numeric time values
+npp_values = npp_data.NPP;  % Assuming the NPP column is named 'NPP'
+
+% Define the time span
+t_span = [min(time), max(time)];  % Example: From the minimum to the maximum time in the dataset
+
+% Initial concentrations of nutrients (Nitrite, Nitrate, Silicate, Phosphate)
+initial_concentrations = [10, 20, 30, 40];  % Example: Initial concentrations
+
+% Nutrient uptake rates
+uptake_rates = [-0.000221, 0.026077, 0.094109, 0.002709];  % Given uptake rates
+
+% Define the function for nutrient dynamics
+nutrient_dynamics = @(t, y, nutrient_indices) -uptake_rates(nutrient_indices)' .* y + interp1(time, npp_values, t);
+
+% Define pairs of nutrients
+nutrient_pairs = {[2, 1], [2, 3], [2, 4], [1, 3], [1, 4]};  % Indices of nutrient pairs (e.g., [2, 1] for nitrate and nitrite)
+
+% Plot the effects of nutrient pairs on NPP dynamics
+num_pairs = numel(nutrient_pairs);
+figure;
+for i = 1:num_pairs
+    % Solve ODE for the i-th nutrient pair while keeping other nutrient concentrations constant
+    [t, concentrations] = ode45(@(t, y) nutrient_dynamics(t, y, nutrient_pairs{i}), t_span, initial_concentrations(nutrient_pairs{i}));
+
+    % Plot the effect of the i-th nutrient pair on NPP dynamics
+    subplot(num_pairs, 1, i);
+    plot(t, concentrations, 'b', 'LineWidth', 2);
+    xlabel('Time');
+    ylabel('Concentration');
+    nutrient_names = {'Nitrite', 'Nitrate', 'Silicate', 'Phosphate'};
+    title(['Effect of ' nutrient_names{nutrient_pairs{i}(1)} ' and ' nutrient_names{nutrient_pairs{i}(2)} ' on NPP Dynamics']);
+    grid on;
+end
